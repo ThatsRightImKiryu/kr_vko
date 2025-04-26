@@ -104,7 +104,6 @@ calculate_distance() {
 }
 
 is_moving_to_spro() {
-  # set -x
   x1=$1 y1=$2 x2=$3 y2=$4
 
   dx=$((x2 - x1))
@@ -121,13 +120,11 @@ is_moving_to_spro() {
   distance1=$(calculate_distance "$x1" "$y1" "${SPRO_X}" "${SPRO_Y}")
   distance2=$(calculate_distance "$x2" "$y2" "${SPRO_X}" "${SPRO_Y}")
 
-  if  [[ "${distance_to_line} -le ${SPRO_RADIUS}" ]] && [[ "${distance2}" < "${distance1}" ]]; then
+  if  (( $(echo "${distance_to_line} <= ${SPRO_RADIUS}" | bc -l) )) && (( $(echo "${distance2} < ${distance1}" | bc -l) )); then
       echo true
   else
       echo false
   fi
-  set +x
-
 }
 
 ping_vko() {
@@ -168,7 +165,7 @@ while true; do
     y=$(echo "${decoded_target_filename}" | cut -d' ' -f3)
     distance_to_target=$(calculate_distance "$x" "$y" "${RLS_X}" "${RLS_Y}")
 
-    if [[ "${dist_to_target} -le ${RLS_RADIUS}" ]]; then
+    if (( $(echo "${distance_to_target} <= ${RLS_RADIUS}" | bc -l) )); then
       is_in_radar_beam=$(is_in_radar_beam "$x" "$y" "$RLS_ALPHA" "$RLS_ANGLE")
       if "${is_in_radar_beam}"; then
         if [[ -n ${targets[${target_id}]} ]]; then
