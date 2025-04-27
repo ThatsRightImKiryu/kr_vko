@@ -49,7 +49,7 @@ decode_target_filename() {
 fix_target_type() {
 	yspeed=$1
 	if (($(echo "${speed} >= 8000" | bc -l))); then
-		echo "ББ БР"
+		echo "Бал.блок"
 	elif (($(echo "${speed} >= 250" | bc -l))); then
 		echo "Крылатая ракета"
 	else
@@ -174,7 +174,7 @@ while true; do
 
           speed=$(calculate_distance "${prev_x}" "${prev_y}" "$x" "$y") # Count as for 1s == distance
           type=$(fix_target_type ${speed})
-          if [[ $type == "ББ БР" ]]; then
+          if [[ $type == "Бал.блок" ]]; then
             echo "$(date +%X) ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
             if $(is_moving_to_spro "${prev_x}" "${prev_y}" "$x" "$y"); then
               echo "$(date +%X) ${NAME} Цель ID:${target_id} движется в сторону СПРО"

@@ -1,13 +1,13 @@
 #!/bin/bash
-NAME="ZRDN_$1"
-ZRDN_X=$2
-ZRDN_Y=$3
-ZRDN_RADIUS=$4
+NAME="SPRO_$1"
+SPRO_X=$2
+SPRO_Y=$3
+SPRO_RADIUS=$4
 TmpDir=/tmp/GenTargets
 TDir="${TmpDir}/Targets"
 DDir="${TmpDir}/Destroy"
 TARGETS_SIZE=50
-MISSILES=20
+MISSILES=10
 RELOAD_TIME=5 #sec
 EMPTY_AMMO_TIME=''
 
@@ -15,7 +15,7 @@ SLEEP_TIME=0.5
 RETRY_NUM=5
 PING_DIR=/tmp/ping
 PING_LOG="${PING_DIR}/ping.log"
-DETECTED_TARGETS='temp/zrdn_detected_targets.txt'
+DETECTED_TARGETS='temp/spro_detected_targets.txt'
 > "${DETECTED_TARGETS}"
 
 declare -A targets
@@ -48,7 +48,7 @@ decode_target_filename() {
 fix_target_type() {
 	yspeed=$1
 	if (($(echo "${speed} >= 8000" | bc -l))); then
-		echo "ББ БР"
+		echo "Бал.блок"
 	elif (($(echo "${speed} >= 250" | bc -l))); then
 		echo "Крылатая ракета"
 	else
@@ -95,19 +95,19 @@ while true; do
     target_id=$(echo "${decoded_target_filename}" | cut -d' ' -f1)
     x=$(echo "${decoded_target_filename}" | cut -d' ' -f2)
     y=$(echo "${decoded_target_filename}" | cut -d' ' -f3)
-    distance_to_target=$(calculate_distance "$x" "$y" "${ZRDN_X}" "${ZRDN_Y}")
+    distance_to_target=$(calculate_distance "$x" "$y" "${SPRO_X}" "${SPRO_Y}")
 
     grep -q "${target_id}" "${DETECTED_TARGETS}" && continue
     echo "${target_id}" >>"${DETECTED_TARGETS}"
 
-    if (( $(echo "${distance_to_target} <= ${ZRDN_RADIUS}" | bc -l) )); then
+    if (( $(echo "${distance_to_target} <= ${SPRO_RADIUS}" | bc -l) )); then
       if [[ -n ${targets["${target_id}"]} ]]; then
         prev_x=$(echo "${targets[${target_id}]}" | cut -d' ' -f1)
         prev_y=$(echo "${targets[${target_id}]}" | cut -d' ' -f2)
 
         speed=$(calculate_distance "${prev_x}" "${prev_y}" "$x" "$y") # Считаем, что за 1с == дистанция
         type=$(fix_target_type ${speed})
-        if [[ ${type} == "Крылатая ракета" ]] || [[ ${type} == "Самолет" ]]; then
+        if [[ ${type} == "Бал.блок" ]]; then
           echo "$(date +%X) ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
           if [ -n "${shot_targets[${target_id}]}" ]; then
             echo "$(date +%X) ${NAME} Промах по цели ID:${target_id}"
