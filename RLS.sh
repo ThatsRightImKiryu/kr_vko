@@ -27,8 +27,8 @@ decode_target_filename() {
   filepath="${TDir}/${filename}"
 
   if [[ ! -f "${filepath}" ]]; then
-      echo "Error: file ${filename} is not fiund ${TDir}" >&2
-      return 1
+    echo "Ошибка: файл ${filename} не найден в ${TDir}" >&2
+    return 1
   fi
 
   trimmed=${filename:0:-2}  # Without r
@@ -175,10 +175,9 @@ while true; do
           speed=$(calculate_distance "${prev_x}" "${prev_y}" "$x" "$y") # Count as for 1s == distance
           type=$(fix_target_type ${speed})
           if [[ $type == "ББ БР" ]]; then
-            detection_time=$(date '+%d-%m %H:%M:%S.%3N')
-            echo "${detection_time} ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
+            echo "$(date +%X) ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
             if $(is_moving_to_spro "${prev_x}" "${prev_y}" "$x" "$y"); then
-              echo "${detection_time} ${NAME} Цель ID:${target_id} движется в сторону СПРО"
+              echo "$(date +%X) ${NAME} Цель ID:${target_id} движется в сторону СПРО"
             fi
           fi
         fi
