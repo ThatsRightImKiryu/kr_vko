@@ -7,7 +7,9 @@ TmpDir=/tmp/GenTargets
 TDir="${TmpDir}/Targets"
 DDir="${TmpDir}/Destroy"
 TARGETS_SIZE=50
-MISSILES=200
+MISSILES=2
+RELOAD_TIME=5 #sec
+EMPTY_AMMO_TIME=''
 
 SLEEP_TIME=0.5
 RETRY_NUM=5
@@ -71,6 +73,13 @@ calculate_distance() {
 }
 
 while true; do
+  if ((MISSILES == 0)); then
+    current_time=$(date +%s)
+    if ((current_time - EMPTY_AMMO_TIME >= RELOAD_TIME)); then
+      MISSILES=20
+      echo "$(date +%X) ${NAME} Боекомплект восполнен до ${MISSILES} противоракет"
+    fi
+  fi
   # ping_vko &
   > "${DETECTED_TARGETS}"
 
@@ -110,6 +119,7 @@ while true; do
               # set -x
               shot_targets["${target_id}"]=1
               set +x
+            ((MISSILES == 0)) && EMPTY_AMMO_TIME=$(date +%s)
           else
             echo "$(date +%X) ${NAME} Боекомплект закончился. Нет противоракет для перехвата цели ID:${target_id}"
           fi
