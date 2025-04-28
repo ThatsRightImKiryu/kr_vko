@@ -127,31 +127,7 @@ is_moving_to_spro() {
   fi
 }
 
-ping_vko() {
-  # vko_list="ZRDN_1 ZRDN_2 ZRDN_3 RLS_1 RLS_2 RLS_3 SPRO"
-  vko_list="RLS_1"
-  for object in ${vko_list}; do
-    ping_file="${PING_DIR}/PING_${object}"
-    pong_file="${PING_DIR}/PONG_${object}"
-
-    if [[ -f "${pong_file}" ]]; then
-      echo "${NAME}: Pong! ${object} is alive" >> "${PING_LOG}"
-      rm "${pong_file}"
-    else
-      [[ -f "${ping_file}" ]] && retry=$(cat "${ping_file}") || retry=1
-      if (( retry > RETRY_NUM )); then
-        echo "${NAME}: ${object} is DEAD" >> "${PING_LOG}"
-        rm "${ping_file}"
-      else
-        echo "${NAME}:  Ping... ${object}(${retry})" >> "${PING_LOG}"
-        echo $((retry + 1)) > "${ping_file}"
-      fi
-    fi
-  done
-}
-
 while true; do
-  # ping_vko &
 
   last_targets=$(ls ${TDir} -t | head -n ${TARGETS_SIZE} | tr ' ' '\n')
   
@@ -178,6 +154,7 @@ while true; do
             echo "$(date +%X) ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
             if $(is_moving_to_spro "${prev_x}" "${prev_y}" "$x" "$y"); then
               echo "$(date +%X) ${NAME} Цель ID:${target_id} движется в сторону СПРО"
+
             fi
           fi
         fi

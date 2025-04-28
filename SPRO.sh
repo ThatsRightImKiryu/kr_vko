@@ -9,12 +9,13 @@ DDir="${TmpDir}/Destroy"
 TARGETS_SIZE=50
 MISSILES=10
 RELOAD_TIME=5 #sec
-EMPTY_AMMO_TIME=''
+EMPTY_MISSILE_TIME=''
 
 SLEEP_TIME=0.5
 RETRY_NUM=5
 PING_DIR=/tmp/ping
 PING_LOG="${PING_DIR}/ping.log"
+MESSAGES_DIR=messages/
 DETECTED_TARGETS='temp/spro_detected_targets.txt'
 > "${DETECTED_TARGETS}"
 
@@ -46,7 +47,7 @@ decode_target_filename() {
 }
 
 fix_target_type() {
-	yspeed=$1
+	speed=$1
 	if (($(echo "${speed} >= 8000" | bc -l))); then
 		echo "Бал.блок"
 	elif (($(echo "${speed} >= 250" | bc -l))); then
@@ -75,12 +76,12 @@ calculate_distance() {
 while true; do
   if ((MISSILES == 0)); then
     current_time=$(date +%s)
-    if ((current_time - EMPTY_AMMO_TIME >= RELOAD_TIME)); then
+    if ((current_time - EMPTY_MISSILE_TIME >= RELOAD_TIME)); then
       MISSILES=20
       echo "$(date +%X) ${NAME} Боекомплект восполнен до ${MISSILES} противоракет"
     fi
   fi
-  # ping_vko &
+
   > "${DETECTED_TARGETS}"
 
   last_targets=$(ls ${TDir} -t | head -n ${TARGETS_SIZE} | tr ' ' '\n')
@@ -119,7 +120,7 @@ while true; do
               # set -x
               shot_targets["${target_id}"]=1
               set +x
-            ((MISSILES == 0)) && EMPTY_AMMO_TIME=$(date +%s)
+            ((MISSILES == 0)) && EMPTY_MISSILE_TIME=$(date +%s)
           else
             echo "$(date +%X) ${NAME} Боекомплект закончился. Нет противоракет для перехвата цели ID:${target_id}"
           fi
