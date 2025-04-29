@@ -34,7 +34,7 @@ decrypt_message() {
 
 init_db() {
   rm -f "$D"
-	sqlite3 "$DB_FILE" < db/init.sql
+	sqlite3 "$DB" < db/init.sql
 }
 
 ping_vko() {
@@ -83,19 +83,19 @@ while true; do
 
       echo "$timestamp $system_id $target_id $x $y $speed $target_type"
 
-      if [[ "$target_type" == "ББ БР-1" ]]; then
-        target_type="ББ БР"
+      if [[ "$target_type" == "Бал.Блок" ]]; then
+        target_type="Бал.Блок"
         echo "$timestamp $system_id Обнаружена цель ID:$target_id с координатами X:$x Y:$y, скорость: $speed м/с $target_type" >>"$KP_LOG"
         echo "$timestamp $system_id Цель ID:$target_id движется в сторону СПРО" >>"$KP_LOG"
         else
           echo "$timestamp $system_id Обнаружена цель ID:$target_id с координатами X:$x Y:$y, скорость: $speed м/с $target_type" >>"$KP_LOG"
         fi
 
-        sqlite3 "$DB_FILE" "INSERT OR IGNORE INTO targets (id, speed, target_type) VALUES ('$target_id', $speed, '$target_type', $direction);"
+        sqlite3 "$DB" "INSERT OR IGNORE INTO targets (id, speed, target_type) VALUES ('$target_id', $speed, '$target_type', $direction);"
 
         sys_id=$(get_system_id "$system_id")
 
-        sqlite3 "$DB_FILE" "INSERT INTO detections (target_id, system_id, x, y, timestamp) VALUES ('$target_id', $sys_id, $x, $y, '$timestamp');"
+        sqlite3 "$DB" "INSERT INTO detections (target_id, system_id, x, y, timestamp) VALUES ('$target_id', $sys_id, $x, $y, '$timestamp');"
 
         rm -f "$file"
       fi
