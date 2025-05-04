@@ -1,1 +1,14 @@
 Директория для временных файлов
+
+sqlite3 vko.db <<EOF
+.headers on
+.mode table
+SELECT 
+    s.name AS system_name,
+    COUNT(sh.id) AS total_shots,
+    SUM(CASE WHEN sh.result = 1 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN sh.result = 0 THEN 1 ELSE 0 END) AS misses
+FROM shoots sh
+JOIN system_elements s ON sh.system_id = s.id
+GROUP BY s.name;
+EOF

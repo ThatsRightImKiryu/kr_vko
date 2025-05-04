@@ -19,8 +19,64 @@ SPRO_Y=3500000
 SPRO_RADIUS=1700000
 
 declare -A targets
+declare -A detected_first_targets
 
 > "${DETECTED_TARGETS}"
+
+SLEEP_TIME=0.5
+PING_DIR=ping/
+mkdir -p ${PING_DIR}
+PING_LOG="${PING_DIR}/ping.log"
+MESSAGES_DIR=messages
+SHOT_DIR=${MESSAGES_DIR}/shot
+DETECT_DIR=${MESSAGES_DIR}/detect
+MISSILE_DIR=${MESSAGES_DIR}/missile
+LOGS_DIR=logs/
+LOGS_FILE="${LOGS_DIR}/${NAME}.log"
+
+rm -rf ${MESSAGES_DIR}/*/* ${LOGS_DIR}/*
+mkdir -p ${PING_DIR} ${SHOT_DIR} ${DETECT_DIR} ${MISSILE_DIR}
+DETECTED_TARGETS="temp/${NAME}_detected_targets.txt"
+> "${DETECTED_TARGETS}"
+
+password="KR_VKO"
+
+ping_kp() {
+  if [[ -f "${PING_DIR}/PING_${NAME}" ]]; then
+    touch "${PING_DIR}/PONG_${NAME}"
+  fi
+}
+
+encrypt_message() {
+  dir=$1
+  data=$2
+  message=$(echo -n "${data}" | openssl enc -aes-256-cbc \
+    -salt -pbkdf2 -iter 100000 \
+    -pass "pass:${password}" | base64 -w 0)
+  echo $(create_random_file ${dir} ${message})
+}
+
+decrypt_message() {
+  encrypted_data="$1"
+  echo -n "${encrypted_data}" | base64 -d | openssl enc -d -aes-256-cbc \
+    -salt -pbkdf2 -iter 100000 \
+    -pass "pass:${password}"
+}
+
+create_random_file() {
+  dir=$1
+  data=$2
+  file="${dir}/$(mktemp -u ${NAME}_XXXXX)"
+  echo "${data}" > "${file}"
+}
+
+print_all() {
+  dir=$1
+  logfile=${LOGS_FILE}
+  data=$2
+  echo "${data}" | tee -a ${logfile}
+  encrypt_message ${dir} "${data}"
+}
 
 decode_target_filename() {
   filename="$1"
@@ -51,7 +107,7 @@ fix_target_type() {
 	if (($(echo "${speed} >= 8000" | bc -l))); then
 		echo "Бал.блок"
 	elif (($(echo "${speed} >= 250" | bc -l))); then
-		echo "Крылатая ракета"
+		echo "Ракета"
 	else
 		echo "Самолет"
 	fi
@@ -128,7 +184,7 @@ is_moving_to_spro() {
 }
 
 while true; do
-
+	ping_kp
   last_targets=$(ls ${TDir} -t | head -n ${TARGETS_SIZE} | tr ' ' '\n')
   
   for target in ${last_targets}; do
@@ -144,19 +200,23 @@ while true; do
     if (( $(echo "${distance_to_target} <= ${RLS_RADIUS}" | bc -l) )); then
       is_in_radar_beam=$(is_in_radar_beam "$x" "$y" "$RLS_ALPHA" "$RLS_ANGLE")
       if "${is_in_radar_beam}"; then
-        if [[ -n ${targets[${target_id}]} ]]; then
+        if [[ -n "${targets[${target_id}]}" ]]; then
           prev_x=$(echo "${targets[${target_id}]}" | cut -d' ' -f1)
           prev_y=$(echo "${targets[${target_id}]}" | cut -d' ' -f2)
 
           speed=$(calculate_distance "${prev_x}" "${prev_y}" "$x" "$y") # Count as for 1s == distance
           type=$(fix_target_type ${speed})
-          if [[ $type == "Бал.блок" ]]; then
-            echo "$(date +%X) ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
+          # set -x
+          if [[ $type == "Бал.блок" ]] && [[ -z "${detected_first_targets[${target_id}]}" ]]; then
             if $(is_moving_to_spro "${prev_x}" "${prev_y}" "$x" "$y"); then
-              echo "$(date +%X) ${NAME} Цель ID:${target_id} движется в сторону СПРО"
+              print_all "${DETECT_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 1 ${target_id} $x $y ${speed} ${type}"
+            else
+              print_all "${DETECT_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 0 ${target_id} $x $y ${speed} ${type}"
 
             fi
+            detected_first_targets["${target_id}"]="$x $y"
           fi
+          set +x
         fi
       fi
 
@@ -164,5 +224,5 @@ while true; do
     fi
   done
   sleep ${SLEEP_TIME}
-  # break
-done
+  done
+

@@ -7,25 +7,36 @@ TmpDir=/tmp/GenTargets
 TDir="${TmpDir}/Targets"
 DDir="${TmpDir}/Destroy"
 TARGETS_SIZE=50
-MISSILES=20
+MISSILES=2
 RELOAD_TIME=5
+MISS_TIMEOUT=5
 EMPTY_MISSILE_TIME=''
 
 SLEEP_TIME=0.5
-PING_DIR=/tmp/ping
+PING_DIR=ping/
 PING_LOG="${PING_DIR}/ping.log"
-MESSAGES_DIR=messages/
+MESSAGES_DIR=messages
+SHOT_DIR=${MESSAGES_DIR}/shot
+DETECT_DIR=${MESSAGES_DIR}/detect
+MISSILE_DIR=${MESSAGES_DIR}/missile
 LOGS_DIR=logs/
 LOGS_FILE="${LOGS_DIR}/${NAME}.log"
 
-DETECTED_TARGETS='temp/zrdn_detected_targets.txt'
+rm -rf ${MESSAGES_DIR}/*/* ${LOGS_DIR}/*
+mkdir -p ${PING_DIR} ${SHOT_DIR} ${DETECT_DIR} ${MISSILE_DIR}
+DETECTED_TARGETS='temp/ZRDN_detected_targets.txt'
 > "${DETECTED_TARGETS}"
-rm -rf ${MESSAGES_DIR}/* ${LOGS_DIR}/*
 
 password="KR_VKO"
 
 declare -A targets
 declare -A shot_targets
+
+ping_kp() {
+  if [[ -f "${PING_DIR}/PING_${NAME}" ]]; then
+    touch "${PING_DIR}/PONG_${NAME}"
+  fi
+}
 
 encrypt_message() {
   dir=$1
@@ -52,9 +63,9 @@ create_random_file() {
 }
 
 print_all() {
-  dir=${MESSAGES_DIR}
+  dir=$1
   logfile=${LOGS_FILE}
-  data=$1
+  data=$2
   echo "${data}" | tee -a ${logfile}
   encrypt_message ${dir} "${data}"
 }
@@ -89,7 +100,7 @@ fix_target_type() {
 	if (($(echo "${speed} >= 8000" | bc -l))); then
 		echo "Бал.блок"
 	elif (($(echo "${speed} >= 250" | bc -l))); then
-		echo "Крылатая ракета"
+		echo "Ракета"
 	else
 		echo "Самолет"
 	fi
@@ -109,13 +120,18 @@ calculate_distance() {
 }
 
 while true; do
+  ping_kp
+
   if ((MISSILES == 0)); then
     current_time=$(date +%s)
     if ((current_time - EMPTY_MISSILE_TIME >= RELOAD_TIME)); then
       MISSILES=20
-      print_all "$(date +%X) ${NAME} Боекомплект восполнен до ${MISSILES} противоракет"
+      print_all "${MISSILE_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 1"
+      echo "$(date '+%H:%M:%S.%3N') ${NAME} Боекомплект восполнен до ${MISSILES} противоракет"
     fi
   fi
+
+  print_all "${MISSILE_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 2 ${MISSILES}"
 
   > "${DETECTED_TARGETS}"
 
@@ -143,22 +159,31 @@ while true; do
 
         speed=$(calculate_distance "${prev_x}" "${prev_y}" "$x" "$y")
         type=$(fix_target_type ${speed})
-        if [[ ${type} == "Крылатая ракета" ]] || [[ ${type} == "Самолет" ]]; then
-          print_all "$(date +%X) ${NAME} Обнаружена цель ID:${target_id} с координатами X:$x Y:$y, скорость: ${speed} м/с (${type})"
+        if [[ ${type} == "Ракета" ]] || [[ ${type} == "Самолет" ]]; then
           if [ -n "${shot_targets[${target_id}]}" ]; then
-            print_all "$(date +%X) ${NAME} Промах по цели ID:${target_id}"
+            is_missed=$(( $(date "+%s") - "${shot_targets[${target_id}]}" >= "${MISS_TIMEOUT}" ))
+            if [[ -n "${is_missed}" ]]; then
+              print_all "${SHOT_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 1 ${target_id}"
+              unset shot_targets["${target_id}"]}
+            fi
+          else
+            print_all "${DETECT_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 0 ${target_id} $x $y ${speed} ${type}"
           fi
           if ((MISSILES > 0)); then
-            ((MISSILES--))
-              # echo "$(date +%X) ${NAME} Выстрел по цели ID:${target_id}. Противоракет осталось ${MISSILES}"
-              print_all "$(date +%X) ${NAME} Выстрел по цели ID:${target_id}. Противоракет осталось ${MISSILES}"
+            if [[ -z "${shot_targets["${target_id}"]}" ]] || [[ -n "${is_missed}" ]]; then
+              ((MISSILES--))
+              print_all "${SHOT_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 0 ${target_id}"
               echo "${NAME}" > "${DDir}/${target_id}"
 
-              shot_targets["${target_id}"]=1
-            ((MISSILES == 0)) && EMPTY_MISSILE_TIME=$(date +%s)
-          else
-            print_all "$(date +%X) ${NAME} Боекомплект закончился. Нет противоракет для перехвата цели ID:${target_id}"
+              shot_targets["${target_id}"]=$(date +%s)
+              if ((MISSILES == 0)); then
+                EMPTY_MISSILE_TIME=$(date +%s)
+                echo "$(date '+%H:%M:%S.%3N') ${NAME} Боекомплект закончился. Нет противоракет для перехвата цели ID: ${target_id}"
+                print_all "${MISSILE_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 0"
+              fi
+            fi
           fi
+
         fi
       fi
 
@@ -168,12 +193,15 @@ while true; do
 
   for target_id in ${!targets[@]}; do
     if ! grep -q "${target_id}" "${DETECTED_TARGETS}" && [ -n "${shot_targets[${target_id}]}" ]; then
-      print_all "$(date +%X) ${NAME} Цель ID:${target_id} уничтожена"
+      print_all "${SHOT_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 2 ${target_id}"
       unset shot_targets["${target_id}"]
     fi
   done
-  set +x
 
   sleep ${SLEEP_TIME}
 
 done
+
+# DETECT 0 - обнаружена, 1 - движется в сторону ПРО
+# SHOT 0 - выстрел, 1 - промах, 2 - уничтожена
+# MISSILE 0 - боезопас кончился, 1 - боезопас восставнолен, 2 - текущий боезапас
