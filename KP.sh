@@ -122,3 +122,5 @@ while true; do
   sleep ${SLEEP_TIME}
 
 done
+
+# https://docs.google.com/document/d/1BwKeHFfpaDEza1Emyik6kv2X0vijvGyxFSpjyBHYw-U/edit?usp=sharing
