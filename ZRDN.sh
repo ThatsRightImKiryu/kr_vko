@@ -126,7 +126,7 @@ while true; do
     current_time=$(date +%s)
     if ((current_time - EMPTY_MISSILE_TIME >= RELOAD_TIME)); then
       MISSILES=20
-      print_all "${MISSILE_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 1"
+      print_all "${MISSILE_DIR}" "$(date '+%H:%M:%S.%3N') ${NAME} 1 ${MISSILES}"
       echo "$(date '+%H:%M:%S.%3N') ${NAME} Боекомплект восполнен до ${MISSILES} противоракет"
     fi
   fi
